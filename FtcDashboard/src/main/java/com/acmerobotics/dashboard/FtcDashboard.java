@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Typeface;
 import android.util.Base64;
 import android.util.Log;
@@ -42,6 +43,8 @@ import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoWSD;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -188,6 +191,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
     private Telemetry telemetry = new TelemetryAdapter();
 
     private ExecutorService cameraStreamExecutor;
+    private ExecutorService limelightCameraStreamExecutor;
     private int imageQuality = DEFAULT_IMAGE_QUALITY;
 
     // only modified inside withConfigRoot
@@ -498,6 +502,52 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
             }
         }
     }
+
+    private class LimelightCameraStreamRunnable implements Runnable {
+        private HttpURLConnection limelightConnection;
+        private double maxFps;
+
+        private LimelightCameraStreamRunnable(String ipAddress, double maxFps) {
+            try {
+                this.limelightConnection = (HttpURLConnection) new URL("https://" + ipAddress + ":5802").openConnection();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            this.maxFps = maxFps;
+        }
+
+        @Override
+        public void run() {
+            while (!Thread.currentThread().isInterrupted()) {
+                try {
+                    final long timestamp = System.currentTimeMillis();
+
+                    if (core.clientCount() == 0) {
+                        Thread.sleep(250);
+                        continue;
+                    }
+
+                    sendAll(new ReceiveImage(bitmapToJpegString(BitmapFactory.decodeStream(limelightConnection.getInputStream()), imageQuality)));
+
+                    if (maxFps == 0) {
+                        continue;
+                    }
+
+                    long sleepTime = (long) (1000 / maxFps
+                            - (System.currentTimeMillis() - timestamp));
+                    Thread.sleep(Math.max(sleepTime, 0));
+                } catch (InterruptedException | IOException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }
+
+        @Override
+        protected void finalize(){
+            limelightConnection.disconnect();
+        }
+    }
+
 
     private static final Set<String> IGNORED_PACKAGES = new HashSet<>(Arrays.asList(
         "java",
@@ -1119,6 +1169,42 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         if (cameraStreamExecutor != null) {
             cameraStreamExecutor.shutdownNow();
             cameraStreamExecutor = null;
+        }
+    }
+
+    /**
+     * Sends a stream of camera frames from a Limelight3A camera at a regular interval.
+     *
+     * @param ipAddress the custom IP address, if a non-default one is set
+     * @param maxFps maximum frames per second; 0 indicates unlimited
+     */
+    public void startLimelightCameraStream(String ipAddress, double maxFps) {
+        if (!core.enabled) {
+            return;
+        }
+
+        stopLimelightCameraStream();
+
+        limelightCameraStreamExecutor = ThreadPool.newSingleThreadExecutor("limelight camera stream");
+        limelightCameraStreamExecutor.submit(new LimelightCameraStreamRunnable(ipAddress, maxFps));
+    }
+
+    /**
+     * Sends a stream of camera frames from a Limelight3A camera at a regular interval.
+     *
+     * @param maxFps maximum frames per second; 0 indicates unlimited
+     */
+    public void startLimelightCameraStream(double maxFps){
+        startLimelightCameraStream("", maxFps); // TODO ip
+    }
+
+    /**
+     * Stops the Limelight camera frame stream.
+     */
+    public void stopLimelightCameraStream() {
+        if (limelightCameraStreamExecutor != null) {
+            limelightCameraStreamExecutor.shutdownNow();
+            limelightCameraStreamExecutor = null;
         }
     }
 
