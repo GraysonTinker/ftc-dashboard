@@ -20,11 +20,15 @@ import com.acmerobotics.dashboard.config.variable.CustomVariable;
 import com.acmerobotics.dashboard.message.Message;
 import com.acmerobotics.dashboard.message.redux.InitOpMode;
 import com.acmerobotics.dashboard.message.redux.ReceiveGamepadState;
+import com.acmerobotics.dashboard.message.redux.ReceiveHardwareConfig;
 import com.acmerobotics.dashboard.message.redux.ReceiveImage;
 import com.acmerobotics.dashboard.message.redux.ReceiveOpModeList;
 import com.acmerobotics.dashboard.message.redux.ReceiveRobotStatus;
+import com.acmerobotics.dashboard.message.redux.SaveHardwareConfig;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.ftccommon.FtcEventLoop;
+import com.qualcomm.ftccommon.configuration.RobotConfigFile;
+import com.qualcomm.ftccommon.configuration.RobotConfigFileManager;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -195,6 +199,7 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
 
     private FtcEventLoop eventLoop;
     private OpModeManagerImpl opModeManager;
+    private RobotConfigFileManager hardwareConfigManager;
 
     private final Mutex<OpModeAndStatus> activeOpMode = new Mutex<>(new OpModeAndStatus());
 
@@ -628,6 +633,15 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
                     updateGamepads(castMsg.getGamepad1(), castMsg.getGamepad2());
                     break;
                 }
+                case GET_HARDWARE_CONFIG: {
+                    send(new ReceiveHardwareConfig(getRobotConfigFileXML()));
+                    break;
+                }
+                case SAVE_HARDWARE_CONFIG: {
+                    SaveHardwareConfig castMsg = (SaveHardwareConfig) msg;
+                    setRobotConfigFile(castMsg.getHardwareConfigXML());
+                    break;
+                }
                 default: {
                     Log.w(TAG, "Received unknown message of type " + msg.getType());
                     Log.w(TAG, msg.toString());
@@ -876,6 +890,8 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         if (opModeManager != null) {
             opModeManager.registerListener(this);
         }
+
+        hardwareConfigManager = new RobotConfigFileManager();
 
         Thread t = new Thread(new ListOpModesRunnable());
         t.start();
@@ -1280,5 +1296,18 @@ public class FtcDashboard implements OpModeManagerImpl.Notifications {
         }).start();
 
         stopCameraStream();
+    }
+
+    public String getRobotConfigFileXML() {
+        try {
+            return hardwareConfigManager.getActiveConfig().getXml().toString();
+        } catch (Exception e){
+            Log.e(TAG, e.toString());
+            return "";
+        }
+    }
+
+    public void setRobotConfigFile(String configXML){
+        hardwareConfigManager.setActiveConfig(false, RobotConfigFile.fromString(hardwareConfigManager, configXML));
     }
 }
