@@ -23,6 +23,7 @@ import TelemetryView from '@/components/views/TelemetryView';
 import CameraView from '@/components/views/CameraView';
 import OpModeView from '@/components/views/OpModeView';
 import LoggingView from '@/components/views/LoggingView/LoggingView';
+import HardwareConfigView from '@/components/views/HardwareConfigView/HardwareConfigView';
 
 import RadialFab from './RadialFab/RadialFab';
 import RadialFabChild from './RadialFab/RadialFabChild';
@@ -68,6 +69,7 @@ const VIEW_MAP: { [key in ConfigurableView]: ReactElement } = {
   [ConfigurableView.CAMERA_VIEW]: <CameraView />,
   [ConfigurableView.OPMODE_VIEW]: <OpModeView />,
   [ConfigurableView.LOGGING_VIEW]: <LoggingView />,
+  [ConfigurableView.HARDWARE_CONFIG_VIEW]: <HardwareConfigView />,
 };
 
 const LOCAL_STORAGE_LAYOUT_KEY = 'configurableLayoutStorage';
@@ -187,6 +189,19 @@ const DEFAULT_GRID: GridItem[] = [
       isResizable: true,
     },
   },
+  {
+    id: uuidv4(),
+    view: ConfigurableView.HARDWARE_CONFIG_VIEW,
+    layout: {
+      x: 8,
+      y: 0,
+      w: 4,
+      h: 7,
+      minW: GRID_ITEM_MIN_WIDTH,
+      isDraggable: true,
+      isResizable: true,
+    },
+  },
 ];
 
 const DEFAULT_GRID_MEDIUM: GridItem[] = [
@@ -242,6 +257,19 @@ const DEFAULT_GRID_MEDIUM: GridItem[] = [
       isResizable: true,
     },
   },
+  {
+    id: uuidv4(),
+    view: ConfigurableView.HARDWARE_CONFIG_VIEW,
+    layout: {
+      x: 8,
+      y: 0,
+      w: 4,
+      h: 11,
+      minW: GRID_ITEM_MIN_WIDTH,
+      isDraggable: true,
+      isResizable: true,
+    },
+  },
 ];
 
 const DEFAULT_GRID_TALL: GridItem[] = [
@@ -292,6 +320,19 @@ const DEFAULT_GRID_TALL: GridItem[] = [
       y: 11,
       w: 4,
       h: 4,
+      minW: GRID_ITEM_MIN_WIDTH,
+      isDraggable: true,
+      isResizable: true,
+    },
+  },
+  {
+    id: uuidv4(),
+    view: ConfigurableView.HARDWARE_CONFIG_VIEW,
+    layout: {
+      x: 8,
+      y: 0,
+      w: 4,
+      h: 14,
       minW: GRID_ITEM_MIN_WIDTH,
       isDraggable: true,
       isResizable: true,
